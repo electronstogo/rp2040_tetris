@@ -8,8 +8,8 @@
 class Square
 {
   public:
-    uint8_t x;
-    uint8_t y;
+    int8_t x;
+    int8_t y;
     uint32_t color;
     bool filled;
 };
@@ -34,9 +34,12 @@ class Block
 
     uint32_t color;
     Square squares[SQUARE_NUMBER];
+    Square center;
 
     Block();
+    Block(const Block& b);
     void init(uint32_t color);
+    void set_coords(int8_t x, int8_t y, uint8_t index);
     void rotate(int16_t degree);
     void move_left();
     void move_right();
@@ -73,9 +76,6 @@ class Tetris
     // Currently active block.
     Block block;
 
-    // Dummy block to check positions after movement.
-    Block dummy_block;
-
 
     void init_button_isr();
     void clear_button_flags();
@@ -86,10 +86,10 @@ class Tetris
     void rotate_block(int16_t degree);
     void finish_block();
     void clear_full_lines();
-    void copy_block(Block* source, Block* destination);
     uint32_t get_random_color();
-    bool intersect_borders(Block block);
-    bool intersection(Block block);
+    bool block_finished();
+    bool intersect_borders(Block b);
+    bool intersection(Block b);
 
     void refresh_screen();
     void draw_square(Square f);

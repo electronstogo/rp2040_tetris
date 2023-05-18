@@ -1,3 +1,4 @@
+#include "TFT_eSPI.h"
 #include "tetris.h"
 #include <Arduino.h>
 #include <algorithm>
@@ -19,6 +20,8 @@ void rotate_right() { g_rotate_right = true; }
 
 Tetris::Tetris()
 {
+    Serial.begin(9600);
+
     // Init field.
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
     {
@@ -45,28 +48,24 @@ Tetris::Tetris()
         {
             move_block_left();
             refresh_screen();
-            continue;
         }
 
         if(g_move_right)
         {
             move_block_right();
             refresh_screen();
-            continue;
         }
 
         if(g_rotate_left)
         {
             rotate_block(-90);
             refresh_screen();
-            continue;
         }
 
         if(g_rotate_left)
         {
             rotate_block(90);
             refresh_screen();
-            continue;
         }
 
         clear_button_flags();
@@ -108,18 +107,22 @@ void Tetris::finish_block()
 {
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
     {
-        uint8_t x = block.squares[i].x;
-        uint8_t y = block.squares[i].y;
+        uint8_t x = block.squares[i].x + block.center.x;
+        uint8_t y = block.squares[i].y + block.center.y;
 
         field_squares[x][y].filled = true;
         field_squares[x][y].color = block.color;
     }
+
+
+
+    block.init(get_random_color());
 }
 
 
 void Tetris::move_block_left()
 {
-    copy_block(&block, &dummy_block);
+    Block dummy_block(block);
     dummy_block.move_left();
 
     if(intersect_borders(dummy_block) || intersection(dummy_block))
@@ -133,10 +136,10 @@ void Tetris::move_block_left()
 
 void Tetris::move_block_right()
 {
-    copy_block(&block, &dummy_block);
-    dummy_block.move_right();
+    Block b(block);
+    b.move_right();
 
-    if(intersect_borders(dummy_block) || intersection(dummy_block))
+    if(intersect_borders(b) || intersection(b))
     {
         return;
     }
@@ -147,17 +150,9 @@ void Tetris::move_block_right()
 
 void Tetris::move_block_downwards()
 {
-    copy_block(&block, &dummy_block);
-    dummy_block.move_down();
-
-    if(intersect_borders(dummy_block))
+    if(block_finished())
     {
-      finish_block();
-      return;
-    }
-
-    if(intersection(dummy_block))
-    {
+        finish_block();
         return;
     }
 
@@ -167,10 +162,10 @@ void Tetris::move_block_downwards()
 
 void Tetris::rotate_block(int16_t degree)
 {
-    copy_block(&block, &dummy_block);
-    dummy_block.rotate(degree);
+    Block b(block);
+    b.rotate(degree);
 
-    if(intersect_borders(dummy_block) || intersection(dummy_block))
+    if(intersect_borders(b) || intersection(b))
     {
         return;
     }
@@ -182,19 +177,33 @@ void Tetris::rotate_block(int16_t degree)
 void Tetris::clear_full_lines() {}
 
 
-/*
- * Checks if the current clock intersects with any field border.
- */
-bool Tetris::intersect_borders(Block block)
+bool Tetris::block_finished()
 {
+    Block b(block);
+    b.move_down();
+
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
     {
-        if(block.squares[i].x > SQUARES_PER_ROW)
+        if((block.center.y + block.squares[i].y == 0) || intersection(b))
         {
             return true;
         }
+    }
 
-        if(block.squares[i].y > SQUARES_PER_COLUMN)
+    return false;
+}
+
+/*
+ * Checks if the current clock intersects with any field border.
+ */
+bool Tetris::intersect_borders(Block b)
+{
+    for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
+    {
+        uint8_t x = b.squares[i].x + b.center.x;
+        uint8_t y = b.squares[i].y + b.center.y;
+
+        if(x > SQUARES_PER_ROW || y > SQUARES_PER_COLUMN)
         {
             return true;
         }
@@ -207,19 +216,19 @@ bool Tetris::intersect_borders(Block block)
 /*
  * Checks if the current clock intersects any other block on the field.
  */
-bool Tetris::intersection(Block block)
+bool Tetris::intersection(Block b)
 {
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
     {
-        uint8_t x = block.squares[i].x;
-        uint8_t y = block.squares[i].y;
+        uint8_t x = b.squares[i].x + b.center.x;
+        uint8_t y = b.squares[i].y + b.center.y;
 
-        if(block.squares[i].x == field_squares[x][y].x)
+        if(x >= SQUARES_PER_ROW || y >= SQUARES_PER_COLUMN)
         {
             return true;
         }
 
-        if(block.squares[i].y == field_squares[x][y].y)
+        if(field_squares[x][y].filled)
         {
             return true;
         }
@@ -227,9 +236,6 @@ bool Tetris::intersection(Block block)
 
     return false;
 }
-
-
-void Tetris::copy_block(Block* source, Block* destination) { memcpy(destination, source, sizeof(destination)); }
 
 
 void Tetris::refresh_screen()
@@ -268,9 +274,13 @@ void Tetris::draw_blocks()
 
 void Tetris::draw_current_block()
 {
-    for(uint8_t x = 0; x < block.SQUARE_NUMBER; x++)
+    Block b(block);
+
+    for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
     {
-        draw_square(block.squares[x]);
+        b.squares[i].x += b.center.x;
+        b.squares[i].y += b.center.y;
+        draw_square(b.squares[i]);
     }
 }
 
@@ -287,13 +297,43 @@ void Tetris::draw_square(Square f)
 
 uint32_t Tetris::get_random_color()
 {
-    uint8_t rand = random(6);
+    switch(rp2040.hwrand32() % 6)
+    {
+    case 0:
+        return TFT_RED;
+    case 1:
+        return TFT_BLUE;
+    case 2:
+        return TFT_GREEN;
+    case 3:
+        return TFT_YELLOW;
+    case 4:
+        return TFT_CYAN;
+    case 5:
+        return TFT_ORANGE;
+    }
 
     return TFT_RED;
 }
 
 
 Block::Block() {}
+
+
+Block::Block(const Block& b)
+{
+    color = b.color;
+    center.x = b.center.x;
+    center.y = b.center.y;
+
+
+    for(uint8_t i = 0; i < b.SQUARE_NUMBER; i++)
+    {
+        squares[i].x = b.squares[i].x;
+        squares[i].y = b.squares[i].y;
+        squares[i].color = b.squares[i].color;
+    }
+}
 
 
 // Creates a new block per random selection.
@@ -304,73 +344,90 @@ void Block::init(uint32_t color)
     squares[1].color = color;
     squares[2].color = color;
     squares[3].color = color;
+    center.x = 4;
+    center.y = 14;
 
-    Shape shape = Shape(random(7));
+    Shape shape = Shape(rp2040.hwrand32() % 7);
 
     switch(shape)
     {
     case I:
-        for(uint8_t i = 0; i < 4; i++)
-        {
-            squares[i].x = 4 + i;
-            squares[i].y = 15;
-        }
+        set_coords(-2, 1, 0);
+        set_coords(-1, 1, 1);
+        set_coords(0, 1, 2);
+        set_coords(1, 1, 3);
         break;
 
     case J:
-        for(uint8_t i = 0; i < 3; i++)
-        {
-            squares[i].x = 4 + i;
-            squares[i].y = 15;
-        }
-        squares[3].x = 6;
-        squares[3].y = 14;
+        set_coords(-1, 1, 0);
+        set_coords(-1, 0, 1);
+        set_coords(0, 0, 2);
+        set_coords(1, 0, 3);
         break;
 
     case S:
-        squares[0].x = 4;
-        squares[1].x = squares[2].x = 5;
-        squares[3].x = 6;
-        squares[0].y = squares[2].y = 15;
-        squares[1].y = squares[3].y = 14;
+        set_coords(1, 0, 0);
+        set_coords(0, 0, 1);
+        set_coords(0, -1, 2);
+        set_coords(-1, -1, 3);
         break;
 
     case Z:
-        squares[0].x = 6;
-        squares[1].x = squares[2].x = 5;
-        squares[3].x = 4;
-        squares[0].y = squares[2].y = 15;
-        squares[1].y = squares[3].y = 14;
+        set_coords(-1, 0, 0);
+        set_coords(0, 0, 1);
+        set_coords(0, -1, 2);
+        set_coords(1, -1, 3);
         break;
 
     case O:
-        squares[0].x = squares[1].x = 4;
-        squares[2].x = squares[3].x = 5;
-        squares[0].y = squares[2].y = 15;
-        squares[1].y = squares[3].y = 14;
+        set_coords(-1, 0, 0);
+        set_coords(0, 0, 1);
+        set_coords(-1, -1, 2);
+        set_coords(0, -1, 3);
         break;
 
     case L:
-        for(uint8_t i = 0; i < 3; i++)
-        {
-            squares[i].x = 4 + i;
-            squares[i].y = 15;
-        }
-        squares[3].x = 6;
-        squares[3].y = 14;
+        set_coords(-1, 1, 0);
+        set_coords(-1, 0, 1);
+        set_coords(-1, -1, 2);
+        set_coords(0, -1, 3);
         break;
 
     case T:
-        for(uint8_t i = 0; i < 3; i++)
-        {
-            squares[i].x = 4 + i;
-            squares[i].y = 15;
-        }
-        squares[3].x = 5;
-        squares[3].y = 14;
+        set_coords(-1, 1, 0);
+        set_coords(0, 1, 1);
+        set_coords(1, 1, 2);
+        set_coords(0, 0, 3);
         break;
     }
 }
+
+
+void Block::set_coords(int8_t x, int8_t y, uint8_t index)
+{
+    if(index >= SQUARE_NUMBER)
+    {
+        return;
+    }
+
+    squares[index].x = x;
+    squares[index].y = y;
+}
+
+
+int WALLKICK_NORMAL_180[4][11][2] = {
+    {{1, 0}, {2, 0}, {1, 1}, {2, 1}, {-1, 0}, {-2, 0}, {-1, 1}, {-2, 1}, {0, -1}, {3, 0}, {-3, 0}},    // 0>>2─┐
+    {{0, 1}, {0, 2}, {-1, 1}, {-1, 2}, {0, -1}, {0, -2}, {-1, -1}, {-1, -2}, {1, 0}, {0, 3}, {0, -3}}, // 1>>3─┼┐
+    {{-1, 0}, {-2, 0}, {-1, -1}, {-2, -1}, {1, 0}, {2, 0}, {1, -1}, {2, -1}, {0, 1}, {-3, 0}, {3, 0}}, // 2>>0─┘│
+    {{0, 1}, {0, 2}, {1, 1}, {1, 2}, {0, -1}, {0, -2}, {1, -1}, {1, -2}, {-1, 0}, {0, 3}, {0, -3}},    // 3>>1──┘
+};
+int WALLKICK_I_180[4][5][2] = {
+    {{-1, 0}, {-2, 0}, {1, 0}, {2, 0}, {0, 1}},  // 0>>2─┐
+    {{0, 1}, {0, 2}, {0, -1}, {0, -2}, {-1, 0}}, // 1>>3─┼┐
+    {{1, 0}, {2, 0}, {-1, 0}, {-2, 0}, {0, -1}}, // 2>>0─┘│
+    {{0, 1}, {0, 2}, {0, -1}, {0, -2}, {1, 0}},  // 3>>1──┘
+};
+
 
 void Block::rotate(int16_t degree)
 {
@@ -379,33 +436,22 @@ void Block::rotate(int16_t degree)
         return;
     }
 
+    // int8_t factor_1 = cos(radians(degree));
+    // int8_t factor_2 = sin(radians(degree));
+
+    int8_t factor_1 = 0;
+    int8_t factor_2 = 1;
+
+
     for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
     {
-        squares[i].x = (float)squares[i].x * cos(degree) + (float)squares[i].y * sin(degree);
-        squares[i].y = (float)squares[i].x * sin(degree) + (float)squares[i].y * cos(degree);
+        squares[i].x = squares[i].x * factor_1 - squares[i].y * factor_2;
+        squares[i].y = squares[i].x * factor_2 + squares[i].y * factor_1;
     }
 }
 
-void Block::move_left()
-{
-    for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
-    {
-        squares[i].x--;
-    }
-}
+void Block::move_left() { center.x--; }
 
-void Block::move_right()
-{
-    for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
-    {
-        squares[i].x++;
-    }
-}
+void Block::move_right() { center.x++; }
 
-void Block::move_down()
-{
-    for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
-    {
-        squares[i].y--;
-    }
-}
+void Block::move_down() { center.y--; }
