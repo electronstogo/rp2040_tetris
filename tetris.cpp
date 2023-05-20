@@ -62,7 +62,7 @@ Tetris::Tetris()
             refresh_screen();
         }
 
-        if(g_rotate_left)
+        if(g_rotate_right)
         {
             rotate_block(90);
             refresh_screen();
@@ -203,7 +203,7 @@ bool Tetris::intersect_borders(Block b)
         uint8_t x = b.squares[i].x + b.center.x;
         uint8_t y = b.squares[i].y + b.center.y;
 
-        if(x > SQUARES_PER_ROW || y > SQUARES_PER_COLUMN)
+        if(x >= SQUARES_PER_ROW || y >= SQUARES_PER_COLUMN)
         {
             return true;
         }
@@ -279,16 +279,7 @@ void Tetris::draw_current_block()
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
     {
         b.squares[i].x = b.center.x + b.squares[i].x;
-        b.squares[i].y = b.center.y - b.squares[i].y;
-        
-        Serial.println("PRINT");
-                Serial.println(block.center.x);
-        Serial.println(block.center.y);
-        Serial.println(block.squares[i].x);
-        Serial.println(block.squares[i].y);
-        Serial.println(b.squares[i].x);
-        Serial.println(b.squares[i].y);
-
+        b.squares[i].y = b.center.y + b.squares[i].y;
         draw_square(b.squares[i]);
     }
 }
@@ -297,11 +288,14 @@ void Tetris::draw_current_block()
 // Draws one square of a tetris block.
 void Tetris::draw_square(Square f)
 {
-    uint16_t x_pixel = f.x * SQUARE_WIDTH + 1 + X_LEFT;
+    uint16_t x_pixel = f.x * SQUARE_WIDTH + 3 + X_LEFT;
     uint16_t y_pixel = f.y * SQUARE_WIDTH + 1 + Y_BOTTOM;
 
     display.filled_rectangle(x_pixel, y_pixel, 10, 10, f.color);
 }
+
+
+
 
 
 uint32_t Tetris::get_random_color()
@@ -407,9 +401,9 @@ void Block::init(uint32_t color)
 
     case T:
         set_coords(-1, 0, 0);
-        set_coords(0, 1, 1);
-        set_coords(1, 0, 2);
-        set_coords(0, 0, 3);
+        set_coords(0, 0, 1);
+        set_coords(0, 1, 2);
+        set_coords(1, 0, 3);
         break;
     }
 }
@@ -452,7 +446,7 @@ void Block::rotate(int16_t degree)
     // int8_t factor_2 = sin(radians(degree));
 
     int8_t factor_1 = 0;
-    int8_t factor_2 = 1;
+    int8_t factor_2 = -1;
 
 
     for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
@@ -461,8 +455,9 @@ void Block::rotate(int16_t degree)
         Serial.println(squares[i].y);
         Serial.println("-----------------");
 
+        int8_t x_temp = squares[i].x;
         squares[i].x = squares[i].x * factor_1 - squares[i].y * factor_2;
-        squares[i].y = squares[i].x * factor_2 + squares[i].y * factor_1;
+        squares[i].y = x_temp * factor_2 + squares[i].y * factor_1;
 
         Serial.println(squares[i].x);
         Serial.println(squares[i].y);
@@ -471,7 +466,5 @@ void Block::rotate(int16_t degree)
 }
 
 void Block::move_left() { center.x--; }
-
-void Block::move_right() { center.x++; }
-
-void Block::move_down() { center.y--; }
+void Block::move_right(){ center.x++; }
+void Block::move_down(){ center.y--; }
