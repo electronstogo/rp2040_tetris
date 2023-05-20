@@ -52,9 +52,4 @@ uint32_t Display::rgb888_to_rgb565(uint32_t color)
     color += g8 * 31 / 255;
 
     return color;
-
-
-    // R = (0b1111100000000000 & input) >> 11;
-    // G = (0b0000011111100000 & input) >> 5;
-    // B = (0b0000000000011111 & input);
 }

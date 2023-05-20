@@ -278,8 +278,17 @@ void Tetris::draw_current_block()
 
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
     {
-        b.squares[i].x += b.center.x;
-        b.squares[i].y += b.center.y;
+        b.squares[i].x = b.center.x + b.squares[i].x;
+        b.squares[i].y = b.center.y - b.squares[i].y;
+        
+        Serial.println("PRINT");
+                Serial.println(block.center.x);
+        Serial.println(block.center.y);
+        Serial.println(block.squares[i].x);
+        Serial.println(block.squares[i].y);
+        Serial.println(b.squares[i].x);
+        Serial.println(b.squares[i].y);
+
         draw_square(b.squares[i]);
     }
 }
@@ -297,7 +306,7 @@ void Tetris::draw_square(Square f)
 
 uint32_t Tetris::get_random_color()
 {
-    switch(rp2040.hwrand32() % 6)
+    switch(rp2040.hwrand32() % 7)
     {
     case 0:
         return TFT_RED;
@@ -311,6 +320,9 @@ uint32_t Tetris::get_random_color()
         return TFT_CYAN;
     case 5:
         return TFT_ORANGE;
+    case 6:
+        return TFT_PURPLE;
+
     }
 
     return TFT_RED;
@@ -366,17 +378,17 @@ void Block::init(uint32_t color)
         break;
 
     case S:
-        set_coords(1, 0, 0);
-        set_coords(0, 0, 1);
-        set_coords(0, -1, 2);
-        set_coords(-1, -1, 3);
+        set_coords(1, 1, 0);
+        set_coords(0, 1, 1);
+        set_coords(0, 0, 2);
+        set_coords(-1, 0, 3);
         break;
 
     case Z:
-        set_coords(-1, 0, 0);
-        set_coords(0, 0, 1);
-        set_coords(0, -1, 2);
-        set_coords(1, -1, 3);
+        set_coords(-1, 1, 0);
+        set_coords(0, 1, 1);
+        set_coords(0, 0, 2);
+        set_coords(1, 0, 3);
         break;
 
     case O:
@@ -387,16 +399,16 @@ void Block::init(uint32_t color)
         break;
 
     case L:
-        set_coords(-1, 1, 0);
-        set_coords(-1, 0, 1);
-        set_coords(-1, -1, 2);
-        set_coords(0, -1, 3);
+        set_coords(-1, 0, 0);
+        set_coords(0, 0, 1);
+        set_coords(1, 0, 2);
+        set_coords(1, 1, 3);
         break;
 
     case T:
-        set_coords(-1, 1, 0);
+        set_coords(-1, 0, 0);
         set_coords(0, 1, 1);
-        set_coords(1, 1, 2);
+        set_coords(1, 0, 2);
         set_coords(0, 0, 3);
         break;
     }
@@ -445,8 +457,16 @@ void Block::rotate(int16_t degree)
 
     for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
     {
+        Serial.println(squares[i].x);
+        Serial.println(squares[i].y);
+        Serial.println("-----------------");
+
         squares[i].x = squares[i].x * factor_1 - squares[i].y * factor_2;
         squares[i].y = squares[i].x * factor_2 + squares[i].y * factor_1;
+
+        Serial.println(squares[i].x);
+        Serial.println(squares[i].y);
+        Serial.println("######################");
     }
 }
 
