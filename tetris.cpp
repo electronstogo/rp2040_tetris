@@ -58,13 +58,13 @@ Tetris::Tetris()
 
         if(g_rotate_left)
         {
-            rotate_block(-90);
+            rotate_block(LEFT);
             refresh_screen();
         }
 
         if(g_rotate_right)
         {
-            rotate_block(90);
+            rotate_block(RIGHT);
             refresh_screen();
         }
 
@@ -115,7 +115,6 @@ void Tetris::finish_block()
     }
 
 
-
     block.init(get_random_color());
 }
 
@@ -160,17 +159,17 @@ void Tetris::move_block_downwards()
 }
 
 
-void Tetris::rotate_block(int16_t degree)
+void Tetris::rotate_block(Direction d)
 {
     Block b(block);
-    b.rotate(degree);
+    b.rotate(d);
 
     if(intersect_borders(b) || intersection(b))
     {
         return;
     }
 
-    block.rotate(degree);
+    block.rotate(d);
 }
 
 
@@ -295,9 +294,6 @@ void Tetris::draw_square(Square f)
 }
 
 
-
-
-
 uint32_t Tetris::get_random_color()
 {
     switch(rp2040.hwrand32() % 7)
@@ -316,7 +312,6 @@ uint32_t Tetris::get_random_color()
         return TFT_ORANGE;
     case 6:
         return TFT_PURPLE;
-
     }
 
     return TFT_RED;
@@ -421,50 +416,25 @@ void Block::set_coords(int8_t x, int8_t y, uint8_t index)
 }
 
 
-int WALLKICK_NORMAL_180[4][11][2] = {
-    {{1, 0}, {2, 0}, {1, 1}, {2, 1}, {-1, 0}, {-2, 0}, {-1, 1}, {-2, 1}, {0, -1}, {3, 0}, {-3, 0}},    // 0>>2─┐
-    {{0, 1}, {0, 2}, {-1, 1}, {-1, 2}, {0, -1}, {0, -2}, {-1, -1}, {-1, -2}, {1, 0}, {0, 3}, {0, -3}}, // 1>>3─┼┐
-    {{-1, 0}, {-2, 0}, {-1, -1}, {-2, -1}, {1, 0}, {2, 0}, {1, -1}, {2, -1}, {0, 1}, {-3, 0}, {3, 0}}, // 2>>0─┘│
-    {{0, 1}, {0, 2}, {1, 1}, {1, 2}, {0, -1}, {0, -2}, {1, -1}, {1, -2}, {-1, 0}, {0, 3}, {0, -3}},    // 3>>1──┘
-};
-int WALLKICK_I_180[4][5][2] = {
-    {{-1, 0}, {-2, 0}, {1, 0}, {2, 0}, {0, 1}},  // 0>>2─┐
-    {{0, 1}, {0, 2}, {0, -1}, {0, -2}, {-1, 0}}, // 1>>3─┼┐
-    {{1, 0}, {2, 0}, {-1, 0}, {-2, 0}, {0, -1}}, // 2>>0─┘│
-    {{0, 1}, {0, 2}, {0, -1}, {0, -2}, {1, 0}},  // 3>>1──┘
-};
-
-
-void Block::rotate(int16_t degree)
+void Block::rotate(Direction d)
 {
     if(shape == O)
     {
         return;
     }
 
-    // int8_t factor_1 = cos(radians(degree));
-    // int8_t factor_2 = sin(radians(degree));
-
-    int8_t factor_1 = 0;
-    int8_t factor_2 = -1;
+    // Simplified rotation matrix.
+    int8_t factor = d == LEFT ? 1 : -1;
 
 
     for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
     {
-        Serial.println(squares[i].x);
-        Serial.println(squares[i].y);
-        Serial.println("-----------------");
-
         int8_t x_temp = squares[i].x;
-        squares[i].x = squares[i].x * factor_1 - squares[i].y * factor_2;
-        squares[i].y = x_temp * factor_2 + squares[i].y * factor_1;
-
-        Serial.println(squares[i].x);
-        Serial.println(squares[i].y);
-        Serial.println("######################");
+        squares[i].x = squares[i].y * factor;
+        squares[i].y = x_temp * factor;
     }
 }
 
 void Block::move_left() { center.x--; }
-void Block::move_right(){ center.x++; }
-void Block::move_down(){ center.y--; }
+void Block::move_right() { center.x++; }
+void Block::move_down() { center.y--; }

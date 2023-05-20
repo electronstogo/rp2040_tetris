@@ -39,17 +39,3 @@ void Display::filled_rectangle(uint8_t x, uint8_t y, uint8_t width, uint8_t heig
 void Display::fill(uint32_t color) { sprite.fillScreen(color); }
 
 void Display::flush() { sprite.pushSprite(0, 0); }
-
-
-uint32_t Display::rgb888_to_rgb565(uint32_t color)
-{
-    uint8_t r8 = color >> 16;
-    uint8_t g8 = color >> 8;
-    uint8_t b8 = color;
-
-    color = (r8 * 31 / 255) << 16;
-    color += (g8 * 63 / 255) << 8;
-    color += g8 * 31 / 255;
-
-    return color;
-}

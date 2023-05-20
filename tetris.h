@@ -5,6 +5,13 @@
 #include <TFT_eSPI.h>
 #include <sys/_stdint.h>
 
+
+enum Direction
+{
+    LEFT,
+    RIGHT
+};
+
 class Square
 {
   public:
@@ -30,6 +37,7 @@ class Block
         T
     };
 
+
     Shape shape;
 
     uint32_t color;
@@ -40,7 +48,7 @@ class Block
     Block(const Block& b);
     void init(uint32_t color);
     void set_coords(int8_t x, int8_t y, uint8_t index);
-    void rotate(int16_t degree);
+    void rotate(Direction d);
     void move_left();
     void move_right();
     void move_down();
@@ -67,6 +75,7 @@ class Tetris
 
     static const uint32_t BACKGROUND = TFT_DARKGREY;
 
+
     // Display.
     Display display;
 
@@ -79,11 +88,11 @@ class Tetris
 
     void init_button_isr();
     void clear_button_flags();
-    
+
     void move_block_left();
     void move_block_right();
     void move_block_downwards();
-    void rotate_block(int16_t degree);
+    void rotate_block(Direction d);
     void finish_block();
     void clear_full_lines();
     uint32_t get_random_color();
