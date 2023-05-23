@@ -24,7 +24,7 @@ class Square
 class Block
 {
   public:
-    static const int8_t SQUARE_NUMBER = 4;
+    static const uint8_t SQUARE_NUMBER = 4;
 
     enum Shape
     {
@@ -59,8 +59,8 @@ class Tetris
   private:
     // Playfield constants.
     static const uint16_t Y_BOTTOM = 2;
-    static const uint16_t X_LEFT = 1;
-    static const uint16_t X_RIGHT = 127;
+    static const uint16_t X_LEFT = 3;
+    static const uint16_t X_RIGHT = 125;
     static const uint8_t SQUARES_PER_COLUMN = 16;
     static const uint8_t SQUARES_PER_ROW = 10;
     static const uint16_t SQUARE_WIDTH = 12;
@@ -76,6 +76,14 @@ class Tetris
     static const uint32_t BACKGROUND = TFT_DARKGREY;
 
 
+    static uint32_t debounce;
+    static const uint16_t DEBOUNCE_DELAY = 150;
+
+    static bool move_left_flag;
+    static bool move_right_flag;
+    static bool rotate_left_flag;
+    static bool rotate_right_flag;
+
     // Display.
     Display display;
 
@@ -87,7 +95,13 @@ class Tetris
 
 
     void init_button_isr();
-    void clear_button_flags();
+    void clear_flags();
+    void run();
+
+    static void move_left();
+    static void move_right();
+    static void rotate_left();
+    static void rotate_right();
 
     void move_block_left();
     void move_block_right();
@@ -95,6 +109,10 @@ class Tetris
     void rotate_block(Direction d);
     void finish_block();
     void clear_full_lines();
+    void shift_field_down(uint8_t index);
+    void shift_line_down(uint8_t index);
+    void clear_line(uint8_t index);
+    void set_square(Square* dest, Square source);
     uint32_t get_random_color();
     bool block_finished();
     bool intersect_borders(Block b);

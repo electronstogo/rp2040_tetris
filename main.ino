@@ -1,13 +1,7 @@
 #include "tetris.h"
 
 
+void setup(void) {}
 
 
-void setup(void) { }
-
-
-
-void loop() 
-{
-    Tetris tetris;
-}
+void loop() { Tetris tetris; }

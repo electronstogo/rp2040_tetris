@@ -6,22 +6,16 @@
 #include <math.h>
 #include <sys/_stdint.h>
 
-volatile bool g_move_left = false;
-volatile bool g_move_right = false;
-volatile bool g_rotate_left = false;
-volatile bool g_rotate_right = false;
 
-
-void move_left() { g_move_left = true; }
-void move_right() { g_move_right = true; }
-void rotate_left() { g_rotate_left = true; }
-void rotate_right() { g_rotate_right = true; }
+uint32_t Tetris::debounce;
+bool Tetris::move_left_flag;
+bool Tetris::move_right_flag;
+bool Tetris::rotate_left_flag;
+bool Tetris::rotate_right_flag;
 
 
 Tetris::Tetris()
 {
-    Serial.begin(9600);
-
     // Init field.
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
     {
@@ -39,36 +33,101 @@ Tetris::Tetris()
     init_button_isr();
 
     block.init(get_random_color());
+
+    run();
+}
+
+
+void Tetris::init_button_isr()
+{
+    attachInterrupt(PIN_MOVE_LEFT, Tetris::move_left, RISING);
+    attachInterrupt(PIN_MOVE_RIGHT, Tetris::move_right, RISING);
+    attachInterrupt(PIN_ROTATE_LEFT, Tetris::rotate_left, RISING);
+    attachInterrupt(PIN_ROTATE_RIGHT, Tetris::rotate_right, RISING);
+}
+
+
+void Tetris::clear_flags()
+{
+    move_left_flag = false;
+    move_right_flag = false;
+    rotate_left_flag = false;
+    rotate_right_flag = false;
+}
+
+
+void Tetris::move_left()
+{
+    if(millis() - debounce > DEBOUNCE_DELAY)
+    {
+        move_left_flag = true;
+        debounce = millis();
+    }
+}
+
+
+void Tetris::move_right()
+{
+    if(millis() - debounce > DEBOUNCE_DELAY)
+    {
+        move_right_flag = true;
+        debounce = millis();
+    }
+}
+
+
+void Tetris::rotate_left()
+{
+    if(millis() - debounce > DEBOUNCE_DELAY)
+    {
+        rotate_left_flag = true;
+        debounce = millis();
+    }
+}
+
+
+void Tetris::rotate_right()
+{
+    if(millis() - debounce > DEBOUNCE_DELAY)
+    {
+        rotate_right_flag = true;
+        debounce = millis();
+    }
+}
+
+
+void Tetris::run()
+{
     uint32_t timestamp = 0;
     uint32_t timestamp_draw = 0;
 
     while(true)
     {
-        if(g_move_left)
+        if(move_left_flag)
         {
             move_block_left();
             refresh_screen();
         }
 
-        if(g_move_right)
+        if(move_right_flag)
         {
             move_block_right();
             refresh_screen();
         }
 
-        if(g_rotate_left)
+        if(rotate_left_flag)
         {
             rotate_block(LEFT);
             refresh_screen();
         }
 
-        if(g_rotate_right)
+        if(rotate_right_flag)
         {
             rotate_block(RIGHT);
             refresh_screen();
         }
 
-        clear_button_flags();
+        clear_flags();
 
         if(millis() - timestamp > MOVE_DELAY)
         {
@@ -85,24 +144,6 @@ Tetris::Tetris()
 }
 
 
-void Tetris::init_button_isr()
-{
-    attachInterrupt(PIN_MOVE_LEFT, move_left, FALLING);
-    attachInterrupt(PIN_MOVE_RIGHT, move_right, FALLING);
-    attachInterrupt(PIN_ROTATE_LEFT, rotate_left, FALLING);
-    attachInterrupt(PIN_ROTATE_RIGHT, rotate_right, FALLING);
-}
-
-
-void Tetris::clear_button_flags()
-{
-    g_move_left = false;
-    g_move_right = false;
-    g_rotate_left = false;
-    g_rotate_right = false;
-}
-
-
 void Tetris::finish_block()
 {
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
@@ -113,6 +154,8 @@ void Tetris::finish_block()
         field_squares[x][y].filled = true;
         field_squares[x][y].color = block.color;
     }
+
+    clear_full_lines();
 
 
     block.init(get_random_color());
@@ -173,7 +216,69 @@ void Tetris::rotate_block(Direction d)
 }
 
 
-void Tetris::clear_full_lines() {}
+void Tetris::clear_full_lines()
+{
+    bool full = true;
+
+    for(uint8_t i = 0; i < SQUARES_PER_COLUMN; i++)
+    {
+        full = true;
+
+        for(uint8_t j = 0; j < SQUARES_PER_ROW; j++)
+        {
+            if(!field_squares[j][i].filled)
+            {
+                full = false;
+                break;
+            }
+        }
+
+        if(full)
+        {
+            shift_field_down(i);
+        }
+    }
+}
+
+
+void Tetris::shift_field_down(uint8_t index)
+{
+    for(uint8_t i = index; i < SQUARES_PER_COLUMN; i++)
+    {
+        shift_line_down(index);
+    }
+}
+
+void Tetris::shift_line_down(uint8_t index)
+{
+    for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
+    {
+        set_square(&field_squares[index][i], field_squares[index + 1][i]);
+    }
+}
+
+
+void Tetris::clear_line(uint8_t index)
+{
+    Square s;
+    s.filled = false;
+
+    for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
+    {
+        s.x = i;
+        s.y = index;
+        set_square(&field_squares[index][i], s);
+    }
+}
+
+
+void Tetris::set_square(Square* dest, Square source)
+{
+    dest->color = source.color;
+    dest->filled = source.filled;
+    dest->x = source.x;
+    dest->y = source.y;
+}
 
 
 bool Tetris::block_finished()
@@ -248,9 +353,12 @@ void Tetris::refresh_screen()
 
 void Tetris::draw_playfield()
 {
-    display.vline(X_LEFT, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, 0xFFFFFF);
-    display.vline(X_RIGHT, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, 0xFFFFFF);
-    display.line(X_RIGHT, Y_BOTTOM, X_LEFT, Y_BOTTOM, 0xFFFFFF);
+    display.vline(X_LEFT, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.vline(X_LEFT + 1, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.vline(X_RIGHT, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.vline(X_RIGHT - 1, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.line(X_RIGHT, Y_BOTTOM, X_LEFT, Y_BOTTOM, TFT_WHITE);
+    display.line(X_RIGHT, Y_BOTTOM - 1, X_LEFT, Y_BOTTOM - 1, TFT_WHITE);
 }
 
 
@@ -287,7 +395,7 @@ void Tetris::draw_current_block()
 // Draws one square of a tetris block.
 void Tetris::draw_square(Square f)
 {
-    uint16_t x_pixel = f.x * SQUARE_WIDTH + 3 + X_LEFT;
+    uint16_t x_pixel = f.x * SQUARE_WIDTH + 2 + X_LEFT;
     uint16_t y_pixel = f.y * SQUARE_WIDTH + 1 + Y_BOTTOM;
 
     display.filled_rectangle(x_pixel, y_pixel, 10, 10, f.color);
@@ -298,20 +406,20 @@ uint32_t Tetris::get_random_color()
 {
     switch(rp2040.hwrand32() % 7)
     {
-    case 0:
-        return TFT_RED;
-    case 1:
-        return TFT_BLUE;
-    case 2:
-        return TFT_GREEN;
-    case 3:
-        return TFT_YELLOW;
-    case 4:
-        return TFT_CYAN;
-    case 5:
-        return TFT_ORANGE;
-    case 6:
-        return TFT_PURPLE;
+        case 0:
+            return TFT_RED;
+        case 1:
+            return TFT_BLUE;
+        case 2:
+            return TFT_GREEN;
+        case 3:
+            return TFT_YELLOW;
+        case 4:
+            return TFT_CYAN;
+        case 5:
+            return TFT_ORANGE;
+        case 6:
+            return TFT_PURPLE;
     }
 
     return TFT_RED;
@@ -352,54 +460,54 @@ void Block::init(uint32_t color)
 
     switch(shape)
     {
-    case I:
-        set_coords(-2, 1, 0);
-        set_coords(-1, 1, 1);
-        set_coords(0, 1, 2);
-        set_coords(1, 1, 3);
-        break;
+        case I:
+            set_coords(-2, 1, 0);
+            set_coords(-1, 1, 1);
+            set_coords(0, 1, 2);
+            set_coords(1, 1, 3);
+            break;
 
-    case J:
-        set_coords(-1, 1, 0);
-        set_coords(-1, 0, 1);
-        set_coords(0, 0, 2);
-        set_coords(1, 0, 3);
-        break;
+        case J:
+            set_coords(-1, 1, 0);
+            set_coords(-1, 0, 1);
+            set_coords(0, 0, 2);
+            set_coords(1, 0, 3);
+            break;
 
-    case S:
-        set_coords(1, 1, 0);
-        set_coords(0, 1, 1);
-        set_coords(0, 0, 2);
-        set_coords(-1, 0, 3);
-        break;
+        case S:
+            set_coords(1, 1, 0);
+            set_coords(0, 1, 1);
+            set_coords(0, 0, 2);
+            set_coords(-1, 0, 3);
+            break;
 
-    case Z:
-        set_coords(-1, 1, 0);
-        set_coords(0, 1, 1);
-        set_coords(0, 0, 2);
-        set_coords(1, 0, 3);
-        break;
+        case Z:
+            set_coords(-1, 1, 0);
+            set_coords(0, 1, 1);
+            set_coords(0, 0, 2);
+            set_coords(1, 0, 3);
+            break;
 
-    case O:
-        set_coords(-1, 0, 0);
-        set_coords(0, 0, 1);
-        set_coords(-1, -1, 2);
-        set_coords(0, -1, 3);
-        break;
+        case O:
+            set_coords(-1, 0, 0);
+            set_coords(0, 0, 1);
+            set_coords(-1, -1, 2);
+            set_coords(0, -1, 3);
+            break;
 
-    case L:
-        set_coords(-1, 0, 0);
-        set_coords(0, 0, 1);
-        set_coords(1, 0, 2);
-        set_coords(1, 1, 3);
-        break;
+        case L:
+            set_coords(-1, 0, 0);
+            set_coords(0, 0, 1);
+            set_coords(1, 0, 2);
+            set_coords(1, 1, 3);
+            break;
 
-    case T:
-        set_coords(-1, 0, 0);
-        set_coords(0, 0, 1);
-        set_coords(0, 1, 2);
-        set_coords(1, 0, 3);
-        break;
+        case T:
+            set_coords(-1, 0, 0);
+            set_coords(0, 0, 1);
+            set_coords(0, 1, 2);
+            set_coords(1, 0, 3);
+            break;
     }
 }
 
@@ -424,13 +532,13 @@ void Block::rotate(Direction d)
     }
 
     // Simplified rotation matrix.
-    int8_t factor = d == LEFT ? 1 : -1;
+    int8_t factor = (d == LEFT) ? 1 : -1;
 
 
     for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
     {
         int8_t x_temp = squares[i].x;
-        squares[i].x = squares[i].y * factor;
+        squares[i].x = squares[i].y * factor * (-1);
         squares[i].y = x_temp * factor;
     }
 }
