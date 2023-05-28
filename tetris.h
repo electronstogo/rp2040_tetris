@@ -6,12 +6,6 @@
 #include <sys/_stdint.h>
 
 
-enum Direction
-{
-    LEFT,
-    RIGHT
-};
-
 class Square
 {
   public:
@@ -19,6 +13,8 @@ class Square
     int8_t y;
     uint32_t color;
     bool filled;
+
+    void init(int8_t x, int8_t y, uint32_t color, bool filled);
 };
 
 class Block
@@ -35,6 +31,12 @@ class Block
         O,
         I,
         T
+    };
+
+    enum Direction
+    {
+        LEFT,
+        RIGHT
     };
 
 
@@ -77,7 +79,7 @@ class Tetris
 
 
     static uint32_t debounce;
-    static const uint16_t DEBOUNCE_DELAY = 150;
+    static const uint16_t DEBOUNCE_DELAY = 250;
 
     static bool move_left_flag;
     static bool move_right_flag;
@@ -106,13 +108,12 @@ class Tetris
     void move_block_left();
     void move_block_right();
     void move_block_downwards();
-    void rotate_block(Direction d);
+    void rotate_block(Block::Direction d);
     void finish_block();
     void clear_full_lines();
     void shift_field_down(uint8_t index);
     void shift_line_down(uint8_t index);
     void clear_line(uint8_t index);
-    void set_square(Square* dest, Square source);
     uint32_t get_random_color();
     bool block_finished();
     bool intersect_borders(Block b);

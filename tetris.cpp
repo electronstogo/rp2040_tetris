@@ -1,4 +1,3 @@
-#include "TFT_eSPI.h"
 #include "tetris.h"
 #include <Arduino.h>
 #include <algorithm>
@@ -21,9 +20,7 @@ Tetris::Tetris()
     {
         for(uint8_t y = 0; y < SQUARES_PER_COLUMN; y++)
         {
-            field_squares[x][y].filled = false;
-            field_squares[x][y].x = x;
-            field_squares[x][y].y = y;
+            field_squares[x][y].init(x, y, TFT_BLACK, false);
         }
     }
 
@@ -32,12 +29,16 @@ Tetris::Tetris()
     draw_playfield();
     init_button_isr();
 
+    // Create first block.
     block.init(get_random_color());
 
     run();
 }
 
 
+/*
+ * Init button interrupts.
+ */
 void Tetris::init_button_isr()
 {
     attachInterrupt(PIN_MOVE_LEFT, Tetris::move_left, RISING);
@@ -47,6 +48,9 @@ void Tetris::init_button_isr()
 }
 
 
+/*
+ * Clear button flags.
+ */
 void Tetris::clear_flags()
 {
     move_left_flag = false;
@@ -55,7 +59,9 @@ void Tetris::clear_flags()
     rotate_right_flag = false;
 }
 
-
+/*
+ * Move block to the left.
+ */
 void Tetris::move_left()
 {
     if(millis() - debounce > DEBOUNCE_DELAY)
@@ -65,7 +71,9 @@ void Tetris::move_left()
     }
 }
 
-
+/*
+ * Move block to the right.
+ */
 void Tetris::move_right()
 {
     if(millis() - debounce > DEBOUNCE_DELAY)
@@ -75,7 +83,9 @@ void Tetris::move_right()
     }
 }
 
-
+/*
+ * Block rotation to the left.
+ */
 void Tetris::rotate_left()
 {
     if(millis() - debounce > DEBOUNCE_DELAY)
@@ -85,7 +95,9 @@ void Tetris::rotate_left()
     }
 }
 
-
+/*
+ * Block rotation to the right.
+ */
 void Tetris::rotate_right()
 {
     if(millis() - debounce > DEBOUNCE_DELAY)
@@ -96,6 +108,9 @@ void Tetris::rotate_right()
 }
 
 
+/*
+ * Tetris thread.
+ */
 void Tetris::run()
 {
     uint32_t timestamp = 0;
@@ -107,34 +122,42 @@ void Tetris::run()
         {
             move_block_left();
             refresh_screen();
+            clear_flags();
+            continue;
         }
 
         if(move_right_flag)
         {
             move_block_right();
             refresh_screen();
+            clear_flags();
+            continue;
         }
 
         if(rotate_left_flag)
         {
-            rotate_block(LEFT);
+            rotate_block(Block::LEFT);
             refresh_screen();
+            clear_flags();
+            continue;
         }
 
         if(rotate_right_flag)
         {
-            rotate_block(RIGHT);
+            rotate_block(Block::RIGHT);
             refresh_screen();
+            clear_flags();
+            continue;
         }
 
-        clear_flags();
-
+        // Block movement.
         if(millis() - timestamp > MOVE_DELAY)
         {
             move_block_downwards();
             timestamp = millis();
         }
 
+        // Drawing of screen.
         if(millis() - timestamp_draw > 1000 / FPS)
         {
             refresh_screen();
@@ -144,6 +167,9 @@ void Tetris::run()
 }
 
 
+/*
+ * Finish block after it reached ground.
+ */
 void Tetris::finish_block()
 {
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
@@ -156,8 +182,6 @@ void Tetris::finish_block()
     }
 
     clear_full_lines();
-
-
     block.init(get_random_color());
 }
 
@@ -202,7 +226,10 @@ void Tetris::move_block_downwards()
 }
 
 
-void Tetris::rotate_block(Direction d)
+/*
+ * Rotates block.
+ */
+void Tetris::rotate_block(Block::Direction d)
 {
     Block b(block);
     b.rotate(d);
@@ -216,6 +243,9 @@ void Tetris::rotate_block(Direction d)
 }
 
 
+/*
+ * Clears lines filled by user.
+ */
 void Tetris::clear_full_lines()
 {
     bool full = true;
@@ -240,7 +270,9 @@ void Tetris::clear_full_lines()
     }
 }
 
-
+/*
+ * Shifts part of field down.
+ */
 void Tetris::shift_field_down(uint8_t index)
 {
     for(uint8_t i = index; i < SQUARES_PER_COLUMN; i++)
@@ -249,6 +281,10 @@ void Tetris::shift_field_down(uint8_t index)
     }
 }
 
+
+/*
+ * Shifts down line.
+ */
 void Tetris::shift_line_down(uint8_t index)
 {
     for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
@@ -258,29 +294,21 @@ void Tetris::shift_line_down(uint8_t index)
 }
 
 
+/*
+ * Clears line.
+ */
 void Tetris::clear_line(uint8_t index)
 {
-    Square s;
-    s.filled = false;
-
     for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
     {
-        s.x = i;
-        s.y = index;
-        set_square(&field_squares[index][i], s);
+        field_squares[index][i].init(i, index, TFT_BLACK, false);
     }
 }
 
 
-void Tetris::set_square(Square* dest, Square source)
-{
-    dest->color = source.color;
-    dest->filled = source.filled;
-    dest->x = source.x;
-    dest->y = source.y;
-}
-
-
+/*
+ * Checks if the active block has reached any ground and is finished.
+ */
 bool Tetris::block_finished()
 {
     Block b(block);
@@ -342,6 +370,9 @@ bool Tetris::intersection(Block b)
 }
 
 
+/*
+ * Refresh the screen with current data.
+ */
 void Tetris::refresh_screen()
 {
     display.fill(BACKGROUND);
@@ -351,6 +382,9 @@ void Tetris::refresh_screen()
 }
 
 
+/*
+ * Draws the tetris field.
+ */
 void Tetris::draw_playfield()
 {
     display.vline(X_LEFT, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
@@ -362,6 +396,9 @@ void Tetris::draw_playfield()
 }
 
 
+/*
+ * Draws all blocks existing in the field.
+ */
 void Tetris::draw_blocks()
 {
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
@@ -379,6 +416,9 @@ void Tetris::draw_blocks()
 }
 
 
+/*
+ * Draws a tetris block.
+ */
 void Tetris::draw_current_block()
 {
     Block b(block);
@@ -392,7 +432,9 @@ void Tetris::draw_current_block()
 }
 
 
-// Draws one square of a tetris block.
+/*
+ * Draws one square of a tetris block.
+ */
 void Tetris::draw_square(Square f)
 {
     uint16_t x_pixel = f.x * SQUARE_WIDTH + 2 + X_LEFT;
@@ -402,6 +444,9 @@ void Tetris::draw_square(Square f)
 }
 
 
+/*
+ * Get a random tetris block color.
+ */
 uint32_t Tetris::get_random_color()
 {
     switch(rp2040.hwrand32() % 7)
@@ -434,6 +479,7 @@ Block::Block(const Block& b)
     color = b.color;
     center.x = b.center.x;
     center.y = b.center.y;
+    shape = b.shape;
 
 
     for(uint8_t i = 0; i < b.SQUARE_NUMBER; i++)
@@ -444,8 +490,9 @@ Block::Block(const Block& b)
     }
 }
 
-
-// Creates a new block per random selection.
+/*
+ * Creates a new block per random selection.
+ */
 void Block::init(uint32_t color)
 {
     this->color = color;
@@ -512,6 +559,9 @@ void Block::init(uint32_t color)
 }
 
 
+/*
+ * Set block coordinates.
+ */
 void Block::set_coords(int8_t x, int8_t y, uint8_t index)
 {
     if(index >= SQUARE_NUMBER)
@@ -524,6 +574,9 @@ void Block::set_coords(int8_t x, int8_t y, uint8_t index)
 }
 
 
+/*
+ * 90° block rotation.
+ */
 void Block::rotate(Direction d)
 {
     if(shape == O)
@@ -531,9 +584,8 @@ void Block::rotate(Direction d)
         return;
     }
 
-    // Simplified rotation matrix.
+    // Simplified rotation matrix for left or right.
     int8_t factor = (d == LEFT) ? 1 : -1;
-
 
     for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
     {
@@ -546,3 +598,15 @@ void Block::rotate(Direction d)
 void Block::move_left() { center.x--; }
 void Block::move_right() { center.x++; }
 void Block::move_down() { center.y--; }
+
+
+/*
+ * Set square values.
+ */
+void Square::init(int8_t x, int8_t y, uint32_t color, bool filled)
+{
+    this->x = x;
+    this->y = y;
+    this->color = color;
+    this->filled = filled;
+}

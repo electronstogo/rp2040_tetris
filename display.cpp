@@ -1,11 +1,6 @@
 #include "display.h"
-#include <SPI.h>
-#include <TFT_eSPI.h>
 #include <sys/_stdint.h>
 
-
-TFT_eSPI tft = TFT_eSPI();
-TFT_eSprite sprite = TFT_eSprite(&tft);
 
 
 Display::Display()
@@ -16,7 +11,9 @@ Display::Display()
     sprite.createSprite(WIDTH, HEIGHT);
 }
 
-
+/*
+* Line from (x1, y1) to (x2, y2).
+*/
 void Display::line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint32_t color)
 {
     sprite.drawLine(x1, y1, x2, y2, color);
@@ -30,12 +27,20 @@ void Display::vline(uint8_t x1, uint8_t y1, uint8_t length, uint32_t color)
     sprite.drawLine(x1, y1, x1, y1 + length, color);
 }
 
+/*
+* Filled rectangle.
+*/
 void Display::filled_rectangle(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint32_t color)
 {
     sprite.fillRect(x, y, width, height, color);
 }
 
-
+/*
+* Fill display with color.
+*/
 void Display::fill(uint32_t color) { sprite.fillScreen(color); }
 
+/*
+* Flush sprite buffer into display.
+*/
 void Display::flush() { sprite.pushSprite(0, 0); }
