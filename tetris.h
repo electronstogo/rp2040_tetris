@@ -79,7 +79,7 @@ class Tetris
 
 
     static uint32_t debounce;
-    static const uint16_t DEBOUNCE_DELAY = 250;
+    static const uint16_t DEBOUNCE_DELAY = 150;
 
     static bool move_left_flag;
     static bool move_right_flag;

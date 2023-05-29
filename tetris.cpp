@@ -15,6 +15,12 @@ bool Tetris::rotate_right_flag;
 
 Tetris::Tetris()
 {
+    pinMode(PIN_MOVE_LEFT, INPUT_PULLDOWN);
+    pinMode(PIN_MOVE_RIGHT, INPUT_PULLDOWN);
+    pinMode(PIN_ROTATE_LEFT, INPUT_PULLDOWN);
+    pinMode(PIN_ROTATE_RIGHT, INPUT_PULLDOWN);
+
+
     // Init field.
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
     {
@@ -289,7 +295,7 @@ void Tetris::shift_line_down(uint8_t index)
 {
     for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
     {
-        set_square(&field_squares[index][i], field_squares[index + 1][i]);
+        //set_square(&field_squares[index][i], field_squares[index + 1][i]);
     }
 }
 
