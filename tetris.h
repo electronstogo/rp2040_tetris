@@ -68,8 +68,8 @@ class Tetris
     static const uint16_t SQUARE_WIDTH = 12;
 
     // Gaming constants.
-    static const uint16_t MOVE_DELAY = 1000;
-    static const uint16_t FPS = 1;
+    uint16_t move_delay = 400;
+    static const uint16_t FPS = 10;
     static const uint8_t PIN_MOVE_LEFT = 20;
     static const uint8_t PIN_MOVE_RIGHT = 18;
     static const uint8_t PIN_ROTATE_LEFT = 19;

@@ -15,6 +15,8 @@ bool Tetris::rotate_right_flag;
 
 Tetris::Tetris()
 {
+    Serial.begin(9600);
+
     pinMode(PIN_MOVE_LEFT, INPUT_PULLDOWN);
     pinMode(PIN_MOVE_RIGHT, INPUT_PULLDOWN);
     pinMode(PIN_ROTATE_LEFT, INPUT_PULLDOWN);
@@ -157,7 +159,7 @@ void Tetris::run()
         }
 
         // Block movement.
-        if(millis() - timestamp > MOVE_DELAY)
+        if(millis() - timestamp > move_delay)
         {
             move_block_downwards();
             timestamp = millis();
@@ -192,6 +194,9 @@ void Tetris::finish_block()
 }
 
 
+/*
+ * Moves active tetris block to the left.
+ */
 void Tetris::move_block_left()
 {
     Block dummy_block(block);
@@ -206,6 +211,9 @@ void Tetris::move_block_left()
 }
 
 
+/*
+ * Moves active tetris block to the right.
+ */
 void Tetris::move_block_right()
 {
     Block b(block);
@@ -220,15 +228,17 @@ void Tetris::move_block_right()
 }
 
 
+/*
+ * Moves active tetris block downwards.
+ */
 void Tetris::move_block_downwards()
 {
+    block.move_down();
+
     if(block_finished())
     {
         finish_block();
-        return;
     }
-
-    block.move_down();
 }
 
 
@@ -272,6 +282,8 @@ void Tetris::clear_full_lines()
         if(full)
         {
             shift_field_down(i);
+            clear_line(SQUARES_PER_COLUMN - 1);
+            i = 0;
         }
     }
 }
@@ -283,7 +295,9 @@ void Tetris::shift_field_down(uint8_t index)
 {
     for(uint8_t i = index; i < SQUARES_PER_COLUMN; i++)
     {
-        shift_line_down(index);
+        shift_line_down(i);
+        Serial.println(index);
+        Serial.println("-----");
     }
 }
 
@@ -295,7 +309,7 @@ void Tetris::shift_line_down(uint8_t index)
 {
     for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
     {
-        //set_square(&field_squares[index][i], field_squares[index + 1][i]);
+        field_squares[i][index].init(i, index, field_squares[i][index + 1].color, field_squares[i][index + 1].filled);
     }
 }
 
@@ -307,7 +321,7 @@ void Tetris::clear_line(uint8_t index)
 {
     for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
     {
-        field_squares[index][i].init(i, index, TFT_BLACK, false);
+        field_squares[i][index].init(i, index, TFT_BLACK, false);
     }
 }
 
@@ -588,6 +602,10 @@ void Block::rotate(Direction d)
     if(shape == O)
     {
         return;
+    }
+    else if(shape == I)
+    {
+
     }
 
     // Simplified rotation matrix for left or right.
