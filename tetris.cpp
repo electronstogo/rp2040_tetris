@@ -22,6 +22,8 @@ Tetris::Tetris()
     pinMode(PIN_ROTATE_LEFT, INPUT_PULLDOWN);
     pinMode(PIN_ROTATE_RIGHT, INPUT_PULLDOWN);
 
+    score = 0;
+
 
     // Init field.
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
@@ -38,7 +40,7 @@ Tetris::Tetris()
     init_button_isr();
 
     // Create first block.
-    block.init(get_random_color());
+    block.init();
 
     run();
 }
@@ -190,7 +192,7 @@ void Tetris::finish_block()
     }
 
     clear_full_lines();
-    block.init(get_random_color());
+    block.init();
 }
 
 
@@ -259,12 +261,36 @@ void Tetris::rotate_block(Block::Direction d)
 }
 
 
+void Tetris::update_score(uint8_t full_lines)
+{
+    switch(full_lines)
+    {
+        case 1:
+            score += ONE_LINE_POINTS;
+            break;
+
+        case 2:
+            score += TWO_LINES_POINTS;
+            break;
+
+        case 3:
+            score += THREE_LINES_POINTS;
+            break;
+
+        case 4:
+            score += FOUR_LINES_POINTS;
+            break;
+    }
+}
+
+
 /*
  * Clears lines filled by user.
  */
 void Tetris::clear_full_lines()
 {
     bool full = true;
+    uint8_t full_lines = 0;
 
     for(uint8_t i = 0; i < SQUARES_PER_COLUMN; i++)
     {
@@ -281,9 +307,18 @@ void Tetris::clear_full_lines()
 
         if(full)
         {
-            shift_field_down(i);
-            clear_line(SQUARES_PER_COLUMN - 1);
-            i = 0;
+            full_lines++;
+        }
+        else if(full_lines)
+        {
+            for(uint8_t k = 0; k < full_lines; k++)
+            {
+                shift_field_down(i - k - 1);
+                clear_line(SQUARES_PER_COLUMN - k - 1);
+            }
+
+            update_score(full_lines);
+            full_lines = 0;
         }
     }
 }
@@ -293,11 +328,9 @@ void Tetris::clear_full_lines()
  */
 void Tetris::shift_field_down(uint8_t index)
 {
-    for(uint8_t i = index; i < SQUARES_PER_COLUMN; i++)
+    for(uint8_t i = index; i < SQUARES_PER_COLUMN - 1; i++)
     {
         shift_line_down(i);
-        Serial.println(index);
-        Serial.println("-----");
     }
 }
 
@@ -396,8 +429,8 @@ bool Tetris::intersection(Block b)
 void Tetris::refresh_screen()
 {
     display.fill(BACKGROUND);
-    draw_playfield();
     draw_blocks();
+    draw_playfield();
     display.flush();
 }
 
@@ -413,6 +446,9 @@ void Tetris::draw_playfield()
     display.vline(X_RIGHT - 1, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
     display.line(X_RIGHT, Y_BOTTOM, X_LEFT, Y_BOTTOM, TFT_WHITE);
     display.line(X_RIGHT, Y_BOTTOM - 1, X_LEFT, Y_BOTTOM - 1, TFT_WHITE);
+
+    // Draw score.
+    display.number(score, 20, 20);
 }
 
 
@@ -464,33 +500,6 @@ void Tetris::draw_square(Square f)
 }
 
 
-/*
- * Get a random tetris block color.
- */
-uint32_t Tetris::get_random_color()
-{
-    switch(rp2040.hwrand32() % 7)
-    {
-        case 0:
-            return TFT_RED;
-        case 1:
-            return TFT_BLUE;
-        case 2:
-            return TFT_GREEN;
-        case 3:
-            return TFT_YELLOW;
-        case 4:
-            return TFT_CYAN;
-        case 5:
-            return TFT_ORANGE;
-        case 6:
-            return TFT_PURPLE;
-    }
-
-    return TFT_RED;
-}
-
-
 Block::Block() {}
 
 
@@ -513,17 +522,12 @@ Block::Block(const Block& b)
 /*
  * Creates a new block per random selection.
  */
-void Block::init(uint32_t color)
+void Block::init()
 {
-    this->color = color;
-    squares[0].color = color;
-    squares[1].color = color;
-    squares[2].color = color;
-    squares[3].color = color;
     center.x = 4;
     center.y = 14;
 
-    Shape shape = Shape(rp2040.hwrand32() % 7);
+    shape = Shape(rp2040.hwrand32() % 7);
 
     switch(shape)
     {
@@ -576,6 +580,39 @@ void Block::init(uint32_t color)
             set_coords(1, 0, 3);
             break;
     }
+
+    color = get_color();
+    squares[0].color = color;
+    squares[1].color = color;
+    squares[2].color = color;
+    squares[3].color = color;
+}
+
+
+/*
+ * Get block color.
+ */
+uint32_t Block::get_color()
+{
+    switch(shape)
+    {
+        case L:
+            return TFT_RED;
+        case J:
+            return TFT_BLUE;
+        case S:
+            return TFT_GREEN;
+        case Z:
+            return TFT_YELLOW;
+        case O:
+            return TFT_CYAN;
+        case I:
+            return TFT_ORANGE;
+        case T:
+            return TFT_PURPLE;
+    }
+
+    return TFT_RED;
 }
 
 
@@ -605,7 +642,6 @@ void Block::rotate(Direction d)
     }
     else if(shape == I)
     {
-
     }
 
     // Simplified rotation matrix for left or right.

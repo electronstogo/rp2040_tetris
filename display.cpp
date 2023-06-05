@@ -1,6 +1,6 @@
 #include "display.h"
 #include <sys/_stdint.h>
-
+#include "Free_Fonts.h"
 
 
 Display::Display()
@@ -33,6 +33,14 @@ void Display::vline(uint8_t x1, uint8_t y1, uint8_t length, uint32_t color)
 void Display::filled_rectangle(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint32_t color)
 {
     sprite.fillRect(x, y, width, height, color);
+}
+
+
+void Display::number(uint32_t number, uint16_t x, uint16_t y)
+{
+    sprite.setTextColor(TFT_WHITE, TFT_DARKGREY);
+    sprite.setFreeFont(FSB9); 
+    sprite.drawString(String(number), x, y, GFXFF);
 }
 
 /*

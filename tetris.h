@@ -48,7 +48,8 @@ class Block
 
     Block();
     Block(const Block& b);
-    void init(uint32_t color);
+    void init();
+    uint32_t get_color();
     void set_coords(int8_t x, int8_t y, uint8_t index);
     void rotate(Direction d);
     void move_left();
@@ -68,23 +69,29 @@ class Tetris
     static const uint16_t SQUARE_WIDTH = 12;
 
     // Gaming constants.
-    uint16_t move_delay = 400;
+    uint16_t move_delay = 700;
     static const uint16_t FPS = 10;
     static const uint8_t PIN_MOVE_LEFT = 20;
     static const uint8_t PIN_MOVE_RIGHT = 18;
     static const uint8_t PIN_ROTATE_LEFT = 19;
     static const uint8_t PIN_ROTATE_RIGHT = 21;
 
+    static const uint16_t ONE_LINE_POINTS = 40;
+    static const uint16_t TWO_LINES_POINTS = 100;
+    static const uint16_t THREE_LINES_POINTS = 300;
+    static const uint16_t FOUR_LINES_POINTS = 1200;
+
     static const uint32_t BACKGROUND = TFT_DARKGREY;
 
-
-    static uint32_t debounce;
     static const uint16_t DEBOUNCE_DELAY = 150;
+    static uint32_t debounce;
 
     static bool move_left_flag;
     static bool move_right_flag;
     static bool rotate_left_flag;
     static bool rotate_right_flag;
+
+    uint32_t score;
 
     // Display.
     Display display;
@@ -109,12 +116,12 @@ class Tetris
     void move_block_right();
     void move_block_downwards();
     void rotate_block(Block::Direction d);
+    void update_score(uint8_t full_lines);
     void finish_block();
     void clear_full_lines();
     void shift_field_down(uint8_t index);
     void shift_line_down(uint8_t index);
     void clear_line(uint8_t index);
-    uint32_t get_random_color();
     bool block_finished();
     bool intersect_borders(Block b);
     bool intersection(Block b);
