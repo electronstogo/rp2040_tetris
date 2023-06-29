@@ -40,7 +40,8 @@ void Display::number(uint32_t number, uint16_t x, uint16_t y)
 {
     sprite.setTextColor(TFT_WHITE, TFT_DARKGREY);
     sprite.setFreeFont(FSB9); 
-    sprite.drawString(String(number), x, y, GFXFF);
+    //sprite.drawString(String(number), x, y, GFXFF);
+    sprite.drawRightString(String(number), x, y, GFXFF);
 }
 
 /*

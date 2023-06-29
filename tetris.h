@@ -60,28 +60,35 @@ class Block
 class Tetris
 {
   private:
+    public:
     // Playfield constants.
-    static const uint16_t Y_BOTTOM = 2;
+    static const uint16_t Y_BOTTOM = 4;
     static const uint16_t X_LEFT = 3;
     static const uint16_t X_RIGHT = 125;
-    static const uint8_t SQUARES_PER_COLUMN = 16;
-    static const uint8_t SQUARES_PER_ROW = 10;
     static const uint16_t SQUARE_WIDTH = 12;
+    static const uint8_t SQUARES_PER_COLUMN = (160 - Y_BOTTOM) / SQUARE_WIDTH;
+    static const uint8_t SQUARES_PER_ROW = 10;
+    static const uint32_t BACKGROUND = TFT_DARKGREY;
+    
 
     // Gaming constants.
-    uint16_t move_delay = 700;
+    uint16_t move_delay = 800;
     static const uint16_t FPS = 10;
+
+
+
+    // Hardware pins.
     static const uint8_t PIN_MOVE_LEFT = 20;
     static const uint8_t PIN_MOVE_RIGHT = 18;
     static const uint8_t PIN_ROTATE_LEFT = 19;
     static const uint8_t PIN_ROTATE_RIGHT = 21;
 
+    // Score data.
     static const uint16_t ONE_LINE_POINTS = 40;
     static const uint16_t TWO_LINES_POINTS = 100;
     static const uint16_t THREE_LINES_POINTS = 300;
     static const uint16_t FOUR_LINES_POINTS = 1200;
 
-    static const uint32_t BACKGROUND = TFT_DARKGREY;
 
     static const uint16_t DEBOUNCE_DELAY = 150;
     static uint32_t debounce;
@@ -92,6 +99,7 @@ class Tetris
     static bool rotate_right_flag;
 
     uint32_t score;
+    bool game_over;
 
     // Display.
     Display display;
@@ -125,6 +133,7 @@ class Tetris
     bool block_finished();
     bool intersect_borders(Block b);
     bool intersection(Block b);
+    void fill_playfield();
 
     void refresh_screen();
     void draw_square(Square f);
@@ -132,7 +141,7 @@ class Tetris
     void draw_blocks();
     void draw_playfield();
 
-  public:
+
     Tetris();
 };
 

@@ -11,8 +11,8 @@ class Display
 {
   private:
   public:
-    static const uint8_t WIDTH = 128;
-    static const uint8_t HEIGHT = 160;
+    static const uint16_t WIDTH = 128;
+    static const uint16_t HEIGHT = 160;
 
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite sprite = TFT_eSprite(&tft);

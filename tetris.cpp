@@ -1,3 +1,4 @@
+#include "TFT_eSPI.h"
 #include "tetris.h"
 #include <Arduino.h>
 #include <algorithm>
@@ -23,6 +24,7 @@ Tetris::Tetris()
     pinMode(PIN_ROTATE_RIGHT, INPUT_PULLDOWN);
 
     score = 0;
+    game_over = false;
 
 
     // Init field.
@@ -42,6 +44,7 @@ Tetris::Tetris()
     // Create first block.
     block.init();
 
+    // Enter main thread.
     run();
 }
 
@@ -80,6 +83,7 @@ void Tetris::move_left()
         debounce = millis();
     }
 }
+
 
 /*
  * Move block to the right.
@@ -128,6 +132,13 @@ void Tetris::run()
 
     while(true)
     {
+        if(game_over)
+        {
+            fill_playfield();
+            refresh_screen();
+            continue;
+        }
+
         if(move_left_flag)
         {
             move_block_left();
@@ -235,12 +246,13 @@ void Tetris::move_block_right()
  */
 void Tetris::move_block_downwards()
 {
-    block.move_down();
-
     if(block_finished())
     {
         finish_block();
+        return;
     }
+
+    block.move_down();
 }
 
 
@@ -292,7 +304,7 @@ void Tetris::clear_full_lines()
     bool full = true;
     uint8_t full_lines = 0;
 
-    for(uint8_t i = 0; i < SQUARES_PER_COLUMN; i++)
+    for(uint8_t i = SQUARES_PER_COLUMN - 1; i > 0; i--)
     {
         full = true;
 
@@ -313,8 +325,8 @@ void Tetris::clear_full_lines()
         {
             for(uint8_t k = 0; k < full_lines; k++)
             {
-                shift_field_down(i - k - 1);
-                clear_line(SQUARES_PER_COLUMN - k - 1);
+                shift_field_down(i + k + 1);
+                clear_line(k + 1);
             }
 
             update_score(full_lines);
@@ -328,7 +340,7 @@ void Tetris::clear_full_lines()
  */
 void Tetris::shift_field_down(uint8_t index)
 {
-    for(uint8_t i = index; i < SQUARES_PER_COLUMN - 1; i++)
+    for(uint8_t i = index; i > 0; i--)
     {
         shift_line_down(i);
     }
@@ -342,7 +354,7 @@ void Tetris::shift_line_down(uint8_t index)
 {
     for(uint8_t i = 0; i < SQUARES_PER_ROW; i++)
     {
-        field_squares[i][index].init(i, index, field_squares[i][index + 1].color, field_squares[i][index + 1].filled);
+        field_squares[i][index].init(i, index, field_squares[i][index - 1].color, field_squares[i][index - 1].filled);
     }
 }
 
@@ -369,8 +381,16 @@ bool Tetris::block_finished()
 
     for(uint8_t i = 0; i < block.SQUARE_NUMBER; i++)
     {
-        if((block.center.y + block.squares[i].y == 0) || intersection(b))
+        if((block.center.y + block.squares[i].y == SQUARES_PER_COLUMN - 1) || intersection(b))
         {
+            Serial.println(block.center.y + block.squares[i].y);
+
+
+            if(block.center.y == 0)
+            {
+                game_over = true;
+            }
+
             return true;
         }
     }
@@ -408,10 +428,6 @@ bool Tetris::intersection(Block b)
         uint8_t x = b.squares[i].x + b.center.x;
         uint8_t y = b.squares[i].y + b.center.y;
 
-        if(x >= SQUARES_PER_ROW || y >= SQUARES_PER_COLUMN)
-        {
-            return true;
-        }
 
         if(field_squares[x][y].filled)
         {
@@ -422,6 +438,20 @@ bool Tetris::intersection(Block b)
     return false;
 }
 
+
+/**
+* Fills the whole playfield with blocks.
+*/
+void Tetris::fill_playfield()
+{
+    for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
+    {
+        for(uint8_t y = 0; y < SQUARES_PER_COLUMN; y++)
+        {
+            field_squares[x][y].init(x, y, TFT_SKYBLUE, true);
+        }
+    }
+}
 
 /*
  * Refresh the screen with current data.
@@ -440,15 +470,15 @@ void Tetris::refresh_screen()
  */
 void Tetris::draw_playfield()
 {
-    display.vline(X_LEFT, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
-    display.vline(X_LEFT + 1, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
-    display.vline(X_RIGHT, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
-    display.vline(X_RIGHT - 1, Y_BOTTOM, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
-    display.line(X_RIGHT, Y_BOTTOM, X_LEFT, Y_BOTTOM, TFT_WHITE);
-    display.line(X_RIGHT, Y_BOTTOM - 1, X_LEFT, Y_BOTTOM - 1, TFT_WHITE);
+    display.vline(X_LEFT, 0, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.vline(X_LEFT + 1, 0, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.vline(X_RIGHT, 0, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.vline(X_RIGHT - 1, 0, SQUARES_PER_COLUMN * SQUARE_WIDTH, TFT_WHITE);
+    display.line(X_RIGHT, 160 - 3, X_LEFT, 160 - 3, TFT_WHITE);
+    display.line(X_RIGHT, 160 - 2, X_LEFT, 160 - 2, TFT_WHITE);
 
     // Draw score.
-    display.number(score, 20, 20);
+    display.number(score, 121, 3);
 }
 
 
@@ -494,7 +524,7 @@ void Tetris::draw_current_block()
 void Tetris::draw_square(Square f)
 {
     uint16_t x_pixel = f.x * SQUARE_WIDTH + 2 + X_LEFT;
-    uint16_t y_pixel = f.y * SQUARE_WIDTH + 1 + Y_BOTTOM;
+    uint16_t y_pixel = f.y * SQUARE_WIDTH + 1;
 
     display.filled_rectangle(x_pixel, y_pixel, 10, 10, f.color);
 }
@@ -525,7 +555,7 @@ Block::Block(const Block& b)
 void Block::init()
 {
     center.x = 4;
-    center.y = 14;
+    center.y = 0;
 
     shape = Shape(rp2040.hwrand32() % 7);
 
@@ -645,7 +675,7 @@ void Block::rotate(Direction d)
     }
 
     // Simplified rotation matrix for left or right.
-    int8_t factor = (d == LEFT) ? 1 : -1;
+    int8_t factor = (d == RIGHT) ? 1 : -1;
 
     for(uint8_t i = 0; i < SQUARE_NUMBER; i++)
     {
@@ -655,9 +685,9 @@ void Block::rotate(Direction d)
     }
 }
 
-void Block::move_left() { center.x--; }
-void Block::move_right() { center.x++; }
-void Block::move_down() { center.y--; }
+void Block::move_left() { center.x++; }
+void Block::move_right() { center.x--; }
+void Block::move_down() { center.y++; }
 
 
 /*
