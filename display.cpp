@@ -36,11 +36,10 @@ void Display::filled_rectangle(uint8_t x, uint8_t y, uint8_t width, uint8_t heig
 }
 
 
-void Display::number(uint32_t number, uint16_t x, uint16_t y)
+void Display::number(uint32_t number, uint16_t x, uint16_t y, uint32_t color)
 {
-    sprite.setTextColor(TFT_WHITE, TFT_DARKGREY);
+    sprite.setTextColor(color, TFT_DARKGREY);
     sprite.setFreeFont(FSB9); 
-    //sprite.drawString(String(number), x, y, GFXFF);
     sprite.drawRightString(String(number), x, y, GFXFF);
 }
 

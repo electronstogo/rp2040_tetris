@@ -13,6 +13,9 @@ bool Tetris::move_right_flag;
 bool Tetris::rotate_left_flag;
 bool Tetris::rotate_right_flag;
 
+const float Tetris::SPEED_TABLE[10] = {48.0 / 60.0, 43.0 / 60.0, 38.0 / 60.0, 33.0 / 60.0, 28.0 / 60.0,
+                                       18.0 / 60.0, 13.0 / 60.0, 8.0 / 60.0,  6.0 / 60.0,  5.0 / 60.0};
+
 
 Tetris::Tetris()
 {
@@ -24,8 +27,12 @@ Tetris::Tetris()
     pinMode(PIN_ROTATE_RIGHT, INPUT_PULLDOWN);
 
     score = 0;
+    level = 2;
     game_over = false;
+    cleared_lines = 0;
 
+    // Movement delay of blocks depends on level.
+    move_delay = (uint16_t)(SPEED_TABLE[level] * 1000.0);
 
     // Init field.
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
@@ -278,20 +285,27 @@ void Tetris::update_score(uint8_t full_lines)
     switch(full_lines)
     {
         case 1:
-            score += ONE_LINE_POINTS;
+            score += ONE_LINE_POINTS * (level + 1);
             break;
 
         case 2:
-            score += TWO_LINES_POINTS;
+            score += TWO_LINES_POINTS * (level + 1);
             break;
 
         case 3:
-            score += THREE_LINES_POINTS;
+            score += THREE_LINES_POINTS * (level + 1);
             break;
 
         case 4:
-            score += FOUR_LINES_POINTS;
+            score += FOUR_LINES_POINTS * (level + 1);
             break;
+    }
+
+    cleared_lines += full_lines;
+
+    if(cleared_lines >= level * 10)
+    {
+        level++;
     }
 }
 
@@ -440,8 +454,8 @@ bool Tetris::intersection(Block b)
 
 
 /**
-* Fills the whole playfield with blocks.
-*/
+ * Fills the whole playfield with blocks.
+ */
 void Tetris::fill_playfield()
 {
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
@@ -477,8 +491,9 @@ void Tetris::draw_playfield()
     display.line(X_RIGHT, 160 - 3, X_LEFT, 160 - 3, TFT_WHITE);
     display.line(X_RIGHT, 160 - 2, X_LEFT, 160 - 2, TFT_WHITE);
 
-    // Draw score.
-    display.number(score, 121, 3);
+    // Draw score and level.
+    display.number(score, 121, 0, TFT_WHITE);
+    display.number(level, 20, 0, TFT_GREENYELLOW);
 }
 
 

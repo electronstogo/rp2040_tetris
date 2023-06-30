@@ -6,6 +6,9 @@
 #include <sys/_stdint.h>
 
 
+/**
+* Tetris square part of block.
+*/
 class Square
 {
   public:
@@ -17,6 +20,9 @@ class Square
     void init(int8_t x, int8_t y, uint32_t color, bool filled);
 };
 
+/**
+* Tetris block.
+*/
 class Block
 {
   public:
@@ -57,6 +63,7 @@ class Block
     void move_down();
 };
 
+
 class Tetris
 {
   private:
@@ -71,10 +78,9 @@ class Tetris
     static const uint32_t BACKGROUND = TFT_DARKGREY;
     
 
-    // Gaming constants.
-    uint16_t move_delay = 800;
+    // Display refresh.
     static const uint16_t FPS = 10;
-
+    static const float SPEED_TABLE[10];
 
 
     // Hardware pins.
@@ -98,10 +104,18 @@ class Tetris
     static bool rotate_left_flag;
     static bool rotate_right_flag;
 
+    // User score from cleared lines.
     uint32_t score;
+    // Current block speed level.
+    uint8_t level;
+    // Game over flag.
     bool game_over;
+    // Delay between block steps.
+    uint16_t move_delay;
+    // Number of overall cleared lines.
+    uint16_t cleared_lines;
 
-    // Display.
+    // Display interface.
     Display display;
 
     // Playfield squares.
