@@ -13,26 +13,23 @@ bool Tetris::move_right_flag;
 bool Tetris::rotate_left_flag;
 bool Tetris::rotate_right_flag;
 
-const float Tetris::SPEED_TABLE[10] = {48.0 / 60.0, 43.0 / 60.0, 38.0 / 60.0, 33.0 / 60.0, 28.0 / 60.0,
-                                       18.0 / 60.0, 13.0 / 60.0, 8.0 / 60.0,  6.0 / 60.0,  5.0 / 60.0};
+const float Tetris::SPEED_TABLE[12] = {48.0, 43.0, 38.0, 33.0, 28.0, 18.0, 13.0, 8.0,  6.0,  5.0, 5.0, 5.0};
 
 
 Tetris::Tetris()
 {
-    Serial.begin(9600);
-
     pinMode(PIN_MOVE_LEFT, INPUT_PULLDOWN);
     pinMode(PIN_MOVE_RIGHT, INPUT_PULLDOWN);
     pinMode(PIN_ROTATE_LEFT, INPUT_PULLDOWN);
     pinMode(PIN_ROTATE_RIGHT, INPUT_PULLDOWN);
 
     score = 0;
-    level = 2;
+    level = 6;
     game_over = false;
     cleared_lines = 0;
 
     // Movement delay of blocks depends on level.
-    move_delay = (uint16_t)(SPEED_TABLE[level] * 1000.0);
+    move_delay = (uint16_t)(SPEED_TABLE[level] / 60.0 * 1000.0);
 
     // Init field.
     for(uint8_t x = 0; x < SQUARES_PER_ROW; x++)
@@ -303,9 +300,10 @@ void Tetris::update_score(uint8_t full_lines)
 
     cleared_lines += full_lines;
 
-    if(cleared_lines >= level * 10)
+    if(cleared_lines >= (level + 1) * 10)
     {
         level++;
+        move_delay = (uint16_t)(SPEED_TABLE[level] / 60.0 * 1000.0);
     }
 }
 

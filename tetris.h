@@ -80,7 +80,7 @@ class Tetris
 
     // Display refresh.
     static const uint16_t FPS = 10;
-    static const float SPEED_TABLE[10];
+    static const float SPEED_TABLE[12];
 
 
     // Hardware pins.
